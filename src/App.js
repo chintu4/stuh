@@ -1,74 +1,89 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
-import { firestore, Kpp } from "./firebase.js";
+import { firestore, Kpp, auth } from "./firebase.js";
 import SignIn from './signin.js';
+import EditableText from './widgets/EditableText.js';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
 // Initialize Firebase and Firestore
 const app = Kpp;
 const db = firestore;
 
-const defaultData = { kudaList: [{ title: "Default Title", countTotal: 1, names: ["Slice", "GATE WAY"] }], message: "" };
+const defaultData = { kudaList: [{ title: "Default Title", countTotal: 0, names: [] }], message: "" };
 
 function App() {
   const [kudaList, setKudaList] = useState([]);
   const [syncStatus, setSyncStatus] = useState(false);
   const [message, setMessage] = useState("");
+  const [currentUser, setCurrentUser] = useState(null);
 
-  // Fetch initial data from Firebase
   useEffect(() => {
-    const fetchData = async () => {
-      const docRef = doc(db, "tasks", "taskData");
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setKudaList(data.kudaList || defaultData.kudaList);
-        setMessage(data.message || defaultData.message);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setCurrentUser(user);
       } else {
-        await setDoc(docRef, defaultData);
-        setKudaList(defaultData.kudaList);
-        setMessage(defaultData.message);
+        setCurrentUser(null);
       }
-    };
-    fetchData();
+    });
+    return unsubscribe;
   }, []);
 
-  // Function to handle adding a new Kuda
+  useEffect(() => {
+    if (currentUser) {
+      const fetchData = async () => {
+        const userId = currentUser.uid;
+        const docRef = doc(db, "users", userId, "data", "tasks"); // Modified to ensure an even number of segments
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setKudaList(data.kudaList || defaultData.kudaList);
+          setMessage(data.message || defaultData.message);
+        } else {
+          await setDoc(docRef, defaultData);
+          setKudaList(defaultData.kudaList);
+          setMessage(defaultData.message);
+        }
+      };
+      fetchData();
+    }
+  }, [currentUser]);
+
   const addKuda = async () => {
-    const newKuda = { title: "New Detail", countTotal: 1, names: ["Slice", "GATE WAY"] };
+    const newKuda = { title: "New Detail", countTotal: 0, names: [] };
     const updatedKudaList = [...kudaList, newKuda];
     setKudaList(updatedKudaList);
 
-    const docRef = doc(db, "tasks", "taskData");
-    await setDoc(docRef, { kudaList: updatedKudaList, message });
-    setSyncStatus(true);
-    setTimeout(() => setSyncStatus(false), 2000);
+    if (currentUser) {
+      const docRef = doc(db, "users", currentUser.uid, "data", "tasks");
+      await setDoc(docRef, { kudaList: updatedKudaList, message });
+      setSyncStatus(true);
+      setTimeout(() => setSyncStatus(false), 2000);
+    }
   };
 
-  // Function to delete a Kuda detail tab
   const deleteKuda = async (index) => {
     const updatedKudaList = kudaList.filter((_, i) => i !== index);
     setKudaList(updatedKudaList);
 
-    const docRef = doc(db, "tasks", "taskData");
+    const docRef = doc(db, "users", currentUser.uid, "data", "tasks");
     await setDoc(docRef, { kudaList: updatedKudaList, message });
   };
 
-  // Function to update Kuda list in Firebase
   const updateKudaInFirebase = async (index, updatedKuda) => {
     const updatedKudaList = [...kudaList];
     updatedKudaList[index] = updatedKuda;
     setKudaList(updatedKudaList);
 
-    const docRef = doc(db, "tasks", "taskData");
+    const docRef = doc(db, "users", currentUser.uid, "data", "tasks");
     await setDoc(docRef, { kudaList: updatedKudaList, message });
   };
 
   return (
     <div className="App" style={styles.app}>
       <header style={styles.header}>
-        <SignIn/>
+        <SignIn />
         {kudaList.map((kuda, index) => (
           <Kuda
             key={index}
@@ -87,10 +102,8 @@ function App() {
   );
 }
 
-// Define Kuda component
-
 function Kuda({ kuda, updateKuda, deleteKuda }) {
-  const { title = "New Detail", countTotal, names = [] } = kuda; // Ensure title and names default values
+  const { title = "New Detail", countTotal, names = [] } = kuda;
   const [countCheck, setCountCheck] = useState(0);
   const [countPercent, setCountPercent] = useState(0);
 
@@ -104,7 +117,7 @@ function Kuda({ kuda, updateKuda, deleteKuda }) {
 
   const addSlice = () => {
     const newNames = [...names, "New Slice"];
-    updateKuda({ ...kuda, names: newNames });
+    updateKuda({ ...kuda, names: newNames, countTotal: countTotal + 1 });
   };
 
   const deleteSlice = (index) => {
@@ -113,7 +126,7 @@ function Kuda({ kuda, updateKuda, deleteKuda }) {
   };
 
   const resetNames = () => {
-    updateKuda({ ...kuda, names: [] });
+    updateKuda({ ...kuda, names: [], countTotal: 0 });
   };
 
   const handleTitleChange = (newTitle) => {
@@ -123,16 +136,15 @@ function Kuda({ kuda, updateKuda, deleteKuda }) {
   return (
     <details style={styles.details}>
       <summary>
-        {/* Editable title */}
-        <EditableText text={title} onTextChange={handleTitleChange} /> - 
+        <EditableSingleText text={title} onTextChange={handleTitleChange} />
         {countPercent.toFixed(2)}% {"[" + countCheck + "/" + countTotal + "]"}
         <button onClick={deleteKuda} style={styles.deleteButton}>Delete Detail</button>
       </summary>
       {names.map((name, i) => (
-        <Slice 
-          key={i} 
-          text={name} 
-          onChange={handleCheckboxChange} 
+        <Slice
+          key={i}
+          text={name}
+          onChange={handleCheckboxChange}
           onTextChange={(newName) => {
             const newNames = [...names];
             newNames[i] = newName;
@@ -147,8 +159,6 @@ function Kuda({ kuda, updateKuda, deleteKuda }) {
   );
 }
 
-
-// Slice component
 function Slice({ text, onChange, onTextChange, onDelete }) {
   const [checked, setChecked] = useState(false);
 
@@ -166,8 +176,7 @@ function Slice({ text, onChange, onTextChange, onDelete }) {
   );
 }
 
-// EditableText component
-const EditableText = ({ text, onTextChange }) => {
+const EditableSingleText = ({ text, onTextChange }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState(text);
 
@@ -181,11 +190,11 @@ const EditableText = ({ text, onTextChange }) => {
 
   const handleBlur = () => {
     setIsEditing(false);
-    onTextChange(value); // Update the text in Firebase after editing
+    onTextChange(value);
   };
 
   return (
-    <div onDoubleClick={handleDoubleClick}>
+    <div onClick={handleDoubleClick}>
       {isEditing ? (
         <input type="text" value={value} onChange={handleChange} onBlur={handleBlur} autoFocus />
       ) : (
@@ -193,9 +202,8 @@ const EditableText = ({ text, onTextChange }) => {
       )}
     </div>
   );
-}
+};
 
-// Inline styling for beautification
 const styles = {
   app: {
     fontFamily: "Arial, sans-serif",

@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 const EditableText = ({ text, onTextChange }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [value, setValue] = useState(text);

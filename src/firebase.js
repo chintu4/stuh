@@ -1,14 +1,17 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import { getAuth ,signInWithPopup} from "firebase/auth";
+import { doc,getDoc,setDoc } from "firebase/firestore";
 // import firebase from "firebase/compat/app";
 import "firebase/compat/auth";
 
+
 import { GoogleAuthProvider } from "firebase/auth";
+
+// my name is chintu sharma
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
-
 // Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyCMzOT-kBIv5GQM4iiWnL9jXMFJ-C5vBJk",
@@ -19,6 +22,8 @@ const firebaseConfig = {
   appId: "1:1092665554209:web:58ca69f4cf8899ab187a60"
 };
 
+
+
 // Initialize Firebase
 
 const Kpp = initializeApp(firebaseConfig);
@@ -27,30 +32,31 @@ const firestore = getFirestore(Kpp);
 const provider = new GoogleAuthProvider();
 
 // export { getAuth as getAuth2 };
-export { auth, firestore, provider,Kpp };
+// export { auth, firestore, provider,Kpp };
 
-// const signInWithGoogle = async () => {
-//   try {
-//     const result = await signInWithPopup(auth, provider);
-//     const user = result.user;
-//     const userRef = doc(firestore, 'users', user.uid); // Create or get user document
+const signInWithGoogle = async () => {
+  try {
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
+    const userRef = doc(firestore, 'users', user.uid); // Create or get user document
 
-//     // Check if the user already exists in Firestore
-//     const userDoc = await getDoc(userRef);
-//     if (!userDoc.exists()) {
-//       // If user doesn't exist, create a new document with user data
-//       await setDoc(userRef, {
-//         name: user.displayName,
-//         email: user.email,
-//         uid: user.uid,
-//         photoURL: user.photoURL,
-//       });
-//     }
+    // Check if the user already exists in Firestore
+    const userDoc = await getDoc(userRef);
+    if (!userDoc.exists()) {
+      // If user doesn't exist, create a new document with user data
+      await setDoc(userRef, {
+        name: user.displayName,
+        email: user.email,
+        uid: user.uid,
+        photoURL: user.photoURL,
+      });
+    }
 
-//     console.log('User signed in and data saved:', user);
-//   } catch (error) {
-//     console.error('Error signing in with Google:', error);
-//   }
-// };
+    console.log('User signed in and data saved:', user);
+  } catch (error) {
+    console.error('Error signing in with Google:', error);
+  }
+};
 
-// export { auth, firestore, signInWithGoogle };
+export { auth, firestore, signInWithGoogle ,Kpp,provider, signInWithPopup};
+// export { auth, provider, signInWithPopup, firestore };
