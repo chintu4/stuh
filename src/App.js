@@ -166,7 +166,7 @@ function Kuda({ kuda, updateKuda, deleteKuda }) {
 
   const deleteSlice = (index) => {
     const newNames = names.filter((_, i) => i !== index);
-    updateKuda({ ...kuda, names: newNames, countTotal: countTotal - 1 });
+    updateKuda({ ...kuda, names: newNames, countTotal: countTotal - 1 ,countCheck: countCheck - 1});
   };
 
   const resetNames = () => {
