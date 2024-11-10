@@ -222,10 +222,21 @@ function Slice({ text, onChange, onTextChange, onDelete }) {
   };
 
   return (
-    <div style={styles.slice}>
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: '1fr 2fr 1fr',
+      gap: '10px',
+      alignItems: 'center',
+      padding: '8px',
+      border: '1px solid #ccc',
+      borderRadius: '5px',
+      boxShadow: '0 0 10px rgba(0, 0, 0, 0.1)',
+    }}>
       <input type="checkbox" checked={checked} onChange={handleChange} />
       <EditableText text={text} onTextChange={onTextChange} />
-      <button onClick={onDelete}>Delete</button>
+      <button onClick={onDelete} style={{ backgroundColor: 'red', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '5px' }}>
+        Delete
+      </button>
     </div>
   );
 }
@@ -246,21 +257,26 @@ const EditableSingleText = ({ text, onTextChange }) => {
     setIsEditing(false);
     onTextChange(value);
   };
-  
+
   return (
-    <div onClick={handleDoubleClick}>
+    <div onClick={handleDoubleClick} style={{ cursor: 'pointer' }}>
       {isEditing ? (
-        <React.Fragment>
-        <span>   </span>
-        <input type="text" value={value} onChange={handleChange} onBlur={handleBlur} placeholder='Enter any text' autoFocus />
-        <pre><span>   </span></pre>
-        </React.Fragment>
+        <input
+          type="text"
+          value={(value === ""||value===" ") ? "Insert text" : value}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          autoFocus
+        />
       ) : (
-        <span>{value}</span>
+        <span style={{ padding: '5px' }}>
+          {value === "" || value === "Insert text" ? "Insert text" : value}
+        </span>
       )}
     </div>
   );
-}
+};
+
 const styles = {
   app: { fontFamily: 'sans-serif', padding: '20px' },
   header: { textAlign: 'center' },
