@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, signInWithRedirect } from 'firebase/auth';
 import { firestore, auth,firebaseConfig} from "./firebase.js";
 import EditableText from './widgets/EditableText.js';
 // import {firebase} from "firebase";
@@ -92,7 +92,7 @@ function App() {
   // Google Sign-In handler
   const handleGoogleSignIn = async () => {
     try {
-      const result = await signInWithPopup(auth, provider);
+      const result = await signInWithRedirect(auth, provider);
       const user = result.user;
       setCurrentUser(user);
     } catch (error) {
