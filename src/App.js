@@ -92,11 +92,19 @@ function App() {
   // Google Sign-In handler
   const handleGoogleSignIn = async () => {
     try {
-      const result = await signInWithPopup(auth,new GoogleAuthProvider());
+      const result = await signInWithPopup(auth, new GoogleAuthProvider());
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      const token = credential.accessToken;
       const user = result.user;
+      console.log("Signed in user:", user);
+      // You can update state after sign-in if you want to display user info
       setCurrentUser(user);
     } catch (error) {
-      console.error("Google sign-in error", error);
+      const errorCode = error.code;
+      const errorMessage = error.message;
+      const email = error.customData.email;
+      const credential = GoogleAuthProvider.credentialFromError(error);
+      console.error("Error signing in with Google:", error);
     }
   };
 
@@ -158,7 +166,7 @@ function Kuda({ kuda, updateKuda, deleteKuda }) {
 
   const deleteSlice = (index) => {
     const newNames = names.filter((_, i) => i !== index);
-    updateKuda({ ...kuda, names: newNames });
+    updateKuda({ ...kuda, names: newNames, countTotal: countTotal - 1 });
   };
 
   const resetNames = () => {
