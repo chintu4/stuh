@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
-import { firestore, Kpp, auth } from "./firebase.js";
-import SignIn from './signin.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'firebase/auth';
+import { firestore, auth,firebaseConfig} from "./firebase.js";
 import EditableText from './widgets/EditableText.js';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
+// import {firebase} from "firebase";
 
-// Initialize Firebase and Firestore
-const app = Kpp;
+// Firebase app initialization
+const app = initializeApp(firebaseConfig);
 const db = firestore;
+const provider = new GoogleAuthProvider();
 
 const defaultData = { kudaList: [{ title: "Default Title", countTotal: 0, names: [] }], message: "" };
 
@@ -29,27 +30,29 @@ function App() {
     return unsubscribe;
   }, []);
 
+  // Optimized fetchData to handle async operations properly
+  const fetchData = useCallback(async (userId) => {
+    const docRef = doc(db, "users", userId, "data", "tasks");
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      setKudaList(data.kudaList || defaultData.kudaList);
+      setMessage(data.message || defaultData.message);
+    } else {
+      await setDoc(docRef, defaultData);
+      setKudaList(defaultData.kudaList);
+      setMessage(defaultData.message);
+    }
+  }, [db]);
+
   useEffect(() => {
     if (currentUser) {
-      const fetchData = async () => {
-        const userId = currentUser.uid;
-        const docRef = doc(db, "users", userId, "data", "tasks"); // Modified to ensure an even number of segments
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setKudaList(data.kudaList || defaultData.kudaList);
-          setMessage(data.message || defaultData.message);
-        } else {
-          await setDoc(docRef, defaultData);
-          setKudaList(defaultData.kudaList);
-          setMessage(defaultData.message);
-        }
-      };
-      fetchData();
+      fetchData(currentUser.uid);
     }
-  }, [currentUser]);
+  }, [currentUser, fetchData]);
 
+  // Add new Kuda with async batching
   const addKuda = async () => {
     const newKuda = { title: "New Detail", countTotal: 0, names: [] };
     const updatedKudaList = [...kudaList, newKuda];
@@ -59,44 +62,77 @@ function App() {
       const docRef = doc(db, "users", currentUser.uid, "data", "tasks");
       await setDoc(docRef, { kudaList: updatedKudaList, message });
       setSyncStatus(true);
-      setTimeout(() => setSyncStatus(false), 2000);
+      setTimeout(() => setSyncStatus(false), 2000);  // Async UI update
     }
   };
 
+  // Delete Kuda
   const deleteKuda = async (index) => {
     const updatedKudaList = kudaList.filter((_, i) => i !== index);
     setKudaList(updatedKudaList);
 
-    const docRef = doc(db, "users", currentUser.uid, "data", "tasks");
-    await setDoc(docRef, { kudaList: updatedKudaList, message });
+    if (currentUser) {
+      const docRef = doc(db, "users", currentUser.uid, "data", "tasks");
+      await setDoc(docRef, { kudaList: updatedKudaList, message });
+    }
   };
 
+  // Update Kuda data in Firebase
   const updateKudaInFirebase = async (index, updatedKuda) => {
     const updatedKudaList = [...kudaList];
     updatedKudaList[index] = updatedKuda;
     setKudaList(updatedKudaList);
 
-    const docRef = doc(db, "users", currentUser.uid, "data", "tasks");
-    await setDoc(docRef, { kudaList: updatedKudaList, message });
+    if (currentUser) {
+      const docRef = doc(db, "users", currentUser.uid, "data", "tasks");
+      await setDoc(docRef, { kudaList: updatedKudaList, message });
+    }
+  };
+
+  // Google Sign-In handler
+  const handleGoogleSignIn = async () => {
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      setCurrentUser(user);
+    } catch (error) {
+      console.error("Google sign-in error", error);
+    }
+  };
+
+  // Google Sign-Out handler
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      setCurrentUser(null);
+    } catch (error) {
+      console.error("Sign-out error", error);
+    }
   };
 
   return (
     <div className="App" style={styles.app}>
       <header style={styles.header}>
-        <SignIn />
-        {kudaList.map((kuda, index) => (
-          <Kuda
-            key={index}
-            index={index}
-            kuda={kuda}
-            updateKuda={(updatedKuda) => updateKudaInFirebase(index, updatedKuda)}
-            deleteKuda={() => deleteKuda(index)}
-          />
-        ))}
-        <button onClick={addKuda}>Add Details</button>
-        <div style={styles.label}>
-          {message} {syncStatus && <span>✅</span>}
-        </div>
+        {!currentUser ? (
+          <button onClick={handleGoogleSignIn}>Sign in with Google</button>
+        ) : (
+          <>
+            <button onClick={handleSignOut}>Sign out</button>
+            {kudaList.map((kuda, index) => (
+              <Kuda
+                key={index}
+                index={index}
+                kuda={kuda}
+                updateKuda={(updatedKuda) => updateKudaInFirebase(index, updatedKuda)}
+                deleteKuda={() => deleteKuda(index)}
+              />
+            ))}
+            <button onClick={addKuda}>Add Details</button>
+            <div style={styles.label}>
+              {message} {syncStatus && <span>✅</span>}
+            </div>
+          </>
+        )}
       </header>
     </div>
   );
@@ -108,7 +144,7 @@ function Kuda({ kuda, updateKuda, deleteKuda }) {
   const [countPercent, setCountPercent] = useState(0);
 
   useEffect(() => {
-    setCountPercent((countCheck / countTotal) * 100);
+    setCountPercent(countTotal > 0 ? (countCheck / countTotal) * 100 : 0);
   }, [countCheck, countTotal]);
 
   const handleCheckboxChange = (isChecked) => {
@@ -205,46 +241,12 @@ const EditableSingleText = ({ text, onTextChange }) => {
 };
 
 const styles = {
-  app: {
-    fontFamily: "Arial, sans-serif",
-    textAlign: "center",
-    color: "#333",
-  },
-  header: {
-    backgroundColor: "#282c34",
-    minHeight: "100vh",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "white",
-  },
-  label: {
-    fontSize: "24px",
-    margin: "20px",
-    cursor: "pointer",
-  },
-  details: {
-    margin: "10px",
-    padding: "5px",
-    backgroundColor: "#444",
-    color: "white",
-    borderRadius: "5px",
-  },
-  slice: {
-    display: "flex",
-    alignItems: "center",
-    margin: "5px 0",
-  },
-  deleteButton: {
-    marginLeft: "10px",
-    backgroundColor: "red",
-    color: "white",
-    border: "none",
-    padding: "5px",
-    borderRadius: "3px",
-    cursor: "pointer",
-  },
+  app: { fontFamily: 'sans-serif', padding: '20px' },
+  header: { textAlign: 'center' },
+  label: { fontWeight: 'bold' },
+  deleteButton: { marginLeft: '10px' },
+  details: { margin: '20px 0' },
+  slice: { display: 'flex', alignItems: 'center', marginBottom: '10px' },
 };
 
 export default App;

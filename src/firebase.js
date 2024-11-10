@@ -58,5 +58,5 @@ const signInWithGoogle = async () => {
   }
 };
 
-export { auth, firestore, signInWithGoogle ,Kpp,provider, signInWithPopup};
+export { auth, firestore, signInWithGoogle ,Kpp,provider, signInWithPopup,firebaseConfig};
 // export { auth, provider, signInWithPopup, firestore };
