@@ -18,8 +18,9 @@ const EditableText = ({ text, onTextChange }) => {
   
     return (
       <div onDoubleClick={handleDoubleClick}>
-        {isEditing ? (
+        {(isEditing==true||value==="")? (
           <input type="text" value={value} onChange={handleChange} onBlur={handleBlur} autoFocus />
+        
         ) : (
           <span>{value}</span>
         )}

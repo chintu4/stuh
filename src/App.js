@@ -4,12 +4,13 @@ import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, signInWithRedirect } from 'firebase/auth';
 import { firestore, auth,firebaseConfig} from "./firebase.js";
 import EditableText from './widgets/EditableText.js';
+
 // import {firebase} from "firebase";
 
 // Firebase app initialization
 const app = initializeApp(firebaseConfig);
 const db = firestore;
-const provider = new GoogleAuthProvider();
+// const provider = new GoogleAuthProvider();
 
 const defaultData = { kudaList: [{ title: "Default Title", countTotal: 0, names: [] }], message: "" };
 
@@ -263,14 +264,14 @@ const EditableSingleText = ({ text, onTextChange }) => {
       {isEditing ? (
         <input
           type="text"
-          value={(value === ""||value===" ") ? "Insert text" : value}
+          value={value} 
           onChange={handleChange}
           onBlur={handleBlur}
           autoFocus
         />
       ) : (
         <span style={{ padding: '5px' }}>
-          {value === "" || value === "Insert text" ? "Insert text" : value}
+          
         </span>
       )}
     </div>
