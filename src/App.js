@@ -147,26 +147,34 @@ function App() {
 }
 
 function Kuda({ kuda, updateKuda, deleteKuda }) {
-  const { title = "New Detail", countTotal, names = [] } = kuda;
+  const { title = "New Detail", names = [] } = kuda;
   const [countCheck, setCountCheck] = useState(0);
   const [countPercent, setCountPercent] = useState(0);
+  const [total, setTotal] = useState(names.length);
 
   useEffect(() => {
-    setCountPercent(countTotal > 0 ? (countCheck / countTotal) * 100 : 0);
-  }, [countCheck, countTotal]);
+    setCountPercent(total > 0 ? (countCheck / total) * 100 : 0);
+  }, [countCheck, total]);
 
-  const handleCheckboxChange = (isChecked) => {
-    setCountCheck((prev) => (isChecked ? prev + 1 : prev - 1));
+  const handleCheckboxChange = (isChecked, index) => {
+    if (isChecked) {
+      setCountCheck((prev) => prev + 1);
+    } else {
+      setCountCheck((prev) => prev - 1);
+    }
   };
 
   const addSlice = () => {
     const newNames = [...names, "New Slice"];
-    updateKuda({ ...kuda, names: newNames, countTotal: countTotal + 1 });
+    updateKuda({ ...kuda, names: newNames });
+    setTotal(total + 1);
   };
 
   const deleteSlice = (index) => {
     const newNames = names.filter((_, i) => i !== index);
-    updateKuda({ ...kuda, names: newNames, countTotal: countTotal - 1 ,countCheck: countCheck - 1});
+    updateKuda({ ...kuda, names: newNames });
+    setTotal(total - 1);
+    setCountCheck((prev) => Math.max(prev - 1, 0)); // Decrement countCheck, but not below 0
   };
 
   const resetNames = () => {
@@ -177,11 +185,13 @@ function Kuda({ kuda, updateKuda, deleteKuda }) {
     updateKuda({ ...kuda, title: newTitle });
   };
 
+ 
+
   return (
     <details style={styles.details}>
       <summary>
         <EditableSingleText text={title} onTextChange={handleTitleChange} />
-        {countPercent.toFixed(2)}% {"[" + countCheck + "/" + countTotal + "]"}
+        {countPercent.toFixed(2)}% {"[" + countCheck + "/" + total + "]"}
         <button onClick={deleteKuda} style={styles.deleteButton}>Delete Detail</button>
       </summary>
       {names.map((name, i) => (
@@ -236,18 +246,21 @@ const EditableSingleText = ({ text, onTextChange }) => {
     setIsEditing(false);
     onTextChange(value);
   };
-
+  
   return (
     <div onClick={handleDoubleClick}>
       {isEditing ? (
-        <input type="text" value={value} onChange={handleChange} onBlur={handleBlur} autoFocus />
+        <React.Fragment>
+        <span>   </span>
+        <input type="text" value={value} onChange={handleChange} onBlur={handleBlur} placeholder='Enter any text' autoFocus />
+        <pre><span>   </span></pre>
+        </React.Fragment>
       ) : (
         <span>{value}</span>
       )}
     </div>
   );
-};
-
+}
 const styles = {
   app: { fontFamily: 'sans-serif', padding: '20px' },
   header: { textAlign: 'center' },
