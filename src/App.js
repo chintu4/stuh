@@ -92,7 +92,7 @@ function App() {
   // Google Sign-In handler
   const handleGoogleSignIn = async () => {
     try {
-      const result = await signInWithRedirect(auth,new GoogleAuthProvider());
+      const result = await signInWithPopup(auth,new GoogleAuthProvider());
       const user = result.user;
       setCurrentUser(user);
     } catch (error) {
