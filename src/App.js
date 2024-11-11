@@ -191,7 +191,7 @@ function Kuda({ kuda, updateKuda, deleteKuda }) {
   return (
     <details style={styles.details}>
       <summary>
-        <EditableSingleText text={title} onTextChange={handleTitleChange} />
+        <EditableText text={title} onTextChange={handleTitleChange} />
         {countPercent.toFixed(2)}% {"[" + countCheck + "/" + total + "]"}
         <button onClick={deleteKuda} style={styles.deleteButton}>Delete Detail</button>
       </summary>
